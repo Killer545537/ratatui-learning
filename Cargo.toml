@@ -1,0 +1,9 @@
+[package]
+name = "ratatui_learn"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sysinfo = "0.34.1"
+ratatui = {version = "0.30.0-alpha.2", features = ["crossterm"]}
+anyhow = "1.0.97"
