@@ -1,44 +1,48 @@
-mod app;
-mod system_data;
-mod ui;
-mod utils;
-
 use crate::app::App;
-use crate::ui::run_app;
-use anyhow::{Context, Result};
+use crate::song_details::extract_metadata;
+use anyhow::Result;
 use ratatui::Terminal;
-
 use ratatui::backend::CrosstermBackend;
-use ratatui::crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+use ratatui::crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use ratatui::crossterm::execute;
+use ratatui::crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use std::io;
 
+mod app;
+mod song_details;
+
 fn main() -> Result<()> {
-    enable_raw_mode().context("Failed to enable raw mode")?;
+    // Setup terminal
+    enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?; // Enter a new screen and enable mouse control
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?; // Initialize the terminal
+    let mut terminal = Terminal::new(backend)?;
 
-    let app = App::new();
-    let res = run_app(&mut terminal, app); // Main app logic
+    // Get file path from command line args
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        println!("Usage: {} <mp3-file>", args[0]);
+        return Ok(());
+    }
 
+    // Extract metadata
+    let metadata = extract_metadata(&args[1])?;
+
+    // Create app and run it
+    let mut app = App::new(metadata);
+    let result = app.run(&mut terminal);
+
+    // Restore terminal
     disable_raw_mode()?;
     execute!(
-        // Close the new window
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
 
-    // Handle potential errors
-    if let Err(err) = res {
-        eprintln!("Error: {err:?}");
-    }
-
-    Ok(())
+    result
 }

@@ -7,3 +7,4 @@ edition = "2024"
 sysinfo = "0.34.1"
 ratatui = {version = "0.30.0-alpha.2", features = ["crossterm"]}
 anyhow = "1.0.97"
+lofty = "0.22.2"
