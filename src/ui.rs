@@ -58,7 +58,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<(
                         _ => {}
                     },
                     InputMode::ConfirmKill => match key.code {
-                        /// Is this better than 'n' for "No"?
+                        // Is this better than 'n' for "No"?
                         KeyCode::Char('y') => app.kill_selected_process(),
                         _ => app.input_mode = InputMode::Normal,
                     },
@@ -79,16 +79,13 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .margin(1)
         .split(f.area());
 
-    // Process table
     render_process_table(f, app, chunks[0]);
 
-    // Process details panel
     render_process_details(f, app, chunks[1]);
 
-    // Help section
     render_help_bar(f, app, chunks[2]);
 
-    // Render popups
+    // Popups
     match app.input_mode {
         InputMode::Search => render_search_popup(f, app),
         InputMode::ConfirmKill => render_kill_confirmation(f, app),
@@ -102,29 +99,35 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 }
 
 fn render_process_table(f: &mut Frame, app: &mut App, area: Rect) {
-    // Get sort indicators
-    let pid_sort = if app.sort_column == SortColumn::Pid {
-        if app.sort_ascending { " ↑" } else { " ↓" }
-    } else {
-        ""
+    let sort_indicator = |column| {
+        if app.sort_column == column {
+            if app.sort_ascending { " ↑" } else { " ↓" }
+        } else {
+            ""
+        }
     };
+    let pid_sort = sort_indicator(SortColumn::Pid);
 
-    let name_sort = if app.sort_column == SortColumn::Name {
-        if app.sort_ascending { " ↑" } else { " ↓" }
-    } else {
-        ""
-    };
+    let name_sort = sort_indicator(SortColumn::Name);
+    let mem_sort = sort_indicator(SortColumn::Memory);
 
-    let mem_sort = if app.sort_column == SortColumn::Memory {
-        if app.sort_ascending { " ↑" } else { " ↓" }
-    } else {
-        ""
-    };
-
+    // Make it similar to something I saw
     let header_cells = [
-        Cell::from(format!("PID{}", pid_sort)).style(Style::default().fg(Color::Green)),
-        Cell::from(format!("Name{}", name_sort)).style(Style::default().fg(Color::Green)),
-        Cell::from(format!("Memory (MB){}", mem_sort)).style(Style::default().fg(Color::Green)),
+        Cell::from(Line::from(vec![
+            "P".fg(Color::Yellow),
+            "ID".fg(Color::Green),
+            pid_sort.fg(Color::Green),
+        ])),
+        Cell::from(Line::from(vec![
+            "N".fg(Color::Yellow),
+            "ame".fg(Color::Green),
+            name_sort.fg(Color::Green),
+        ])),
+        Cell::from(Line::from(vec![
+            "M".fg(Color::Yellow),
+            "emory (MB)".fg(Color::Green),
+            mem_sort.fg(Color::Green),
+        ])),
     ];
 
     let header = Row::new(header_cells)
@@ -176,6 +179,7 @@ fn render_process_table(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(table, area, &mut app.table_state);
 }
 
+/// All the details in a cute little box
 fn render_process_details(f: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
         .borders(Borders::ALL)
@@ -193,7 +197,6 @@ fn render_process_details(f: &mut Frame, app: &App, area: Rect) {
                 "Memory: ".into(),
                 format!("{:.2} MB", process.memory_mb).yellow(),
             ]),
-            // Add more details here as needed
         ];
 
         let text = Paragraph::new(details).alignment(Alignment::Left);
@@ -251,7 +254,6 @@ fn render_search_popup(f: &mut Frame, app: &App) {
 
     f.render_widget(text, inner_area);
 
-    // Set cursor position
     f.set_cursor_position((
         inner_area.x + app.search_query.len() as u16 + 2,
         inner_area.y,
@@ -265,7 +267,7 @@ fn render_kill_confirmation(f: &mut Frame, app: &App) {
         .border_type(BorderType::Rounded)
         .style(Style::default().bg(Color::DarkGray));
 
-    f.render_widget(Clear, area); // Clear the area
+    f.render_widget(Clear, area);
     f.render_widget(popup_block, area);
 
     let process_name = app
@@ -297,10 +299,9 @@ fn render_kill_confirmation(f: &mut Frame, app: &App) {
 fn render_message(f: &mut Frame, message: &str, color: Color) {
     let area = centered_rect(50, 3, f.area());
 
-    // Clear the area first
     f.render_widget(Clear, area);
 
-    // Calculate inner area manually instead of using popup_block.inner()
+    // popup_block.inner() fails here
     let inner_area = Rect {
         x: area.x + 1,
         y: area.y + 1,
@@ -308,7 +309,6 @@ fn render_message(f: &mut Frame, message: &str, color: Color) {
         height: area.height - 2,
     };
 
-    // Create and render the block
     let popup_block = Block::default()
         .title("Message")
         .borders(Borders::ALL)
@@ -316,7 +316,6 @@ fn render_message(f: &mut Frame, message: &str, color: Color) {
 
     f.render_widget(popup_block, area);
 
-    // Create and render the text in the inner area
     let text = Paragraph::new(message)
         .style(Style::default().fg(color))
         .alignment(Alignment::Center);
